@@ -25,6 +25,12 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.bundles.micronaut.metrics)
 
+  implementation(platform("io.opentelemetry:opentelemetry-bom:1.51.0"))
+  implementation("io.opentelemetry:opentelemetry-api")
+  implementation("io.opentelemetry:opentelemetry-sdk")
+  implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+  implementation("io.opentelemetry:opentelemetry-sdk-extension-autoconfigure")
+
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))
@@ -43,6 +49,7 @@ dependencies {
   implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-db:db-lib"))
   implementation(project(":oss:airbyte-data"))
+  implementation(libs.jooq)
 
   compileOnly(libs.micronaut.openapi.annotations)
 
