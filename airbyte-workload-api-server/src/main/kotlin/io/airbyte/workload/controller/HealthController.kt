@@ -10,6 +10,9 @@ import io.micronaut.http.annotation.Get
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
 
 /**
  * This health check exists to ensure that a health check endpoint is available on the same port that this server instance is running.
