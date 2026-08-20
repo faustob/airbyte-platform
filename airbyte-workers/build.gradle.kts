@@ -61,7 +61,6 @@ dependencies {
   implementation(libs.micrometer.statsd)
   implementation(libs.sentry.java)
   implementation(libs.failsafe)
-  implementation("com.datadoghq:dd-trace-api:1.55.0")
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:server-api"))
