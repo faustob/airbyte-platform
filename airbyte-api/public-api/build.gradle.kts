@@ -6,6 +6,14 @@ plugins {
 
 dependencies {
 
+  // OpenTelemetry: this module is a library (JAX-RS interface generator for the public API surface,
+  // interfaceOnly=true) consumed by the actual server application (e.g. airbyte-server), which owns
+  // SDK construction/registration. Per the library rule, only the OTel API is added here so that any
+  // instrumentation added at the real request-handling implementation (in the consuming application)
+  // can call GlobalOpenTelemetry.getMeter/getTracer without pulling in or re-registering an SDK here.
+  implementation(platform("io.opentelemetry:opentelemetry-bom:1.51.0"))
+  implementation("io.opentelemetry:opentelemetry-api")
+
   ksp(libs.micronaut.openapi)
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
