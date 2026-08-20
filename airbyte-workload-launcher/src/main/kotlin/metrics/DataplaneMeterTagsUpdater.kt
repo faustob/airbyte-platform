@@ -4,35 +4,14 @@
 
 package io.airbyte.workload.launcher.metrics
 
-import io.airbyte.config.WorkloadConstants.Companion.PUBLIC_ORG_ID
-import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.launcher.model.DataplaneConfig
-import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.core.instrument.config.MeterFilter
 import io.micronaut.context.event.ApplicationEventListener
 import jakarta.inject.Singleton
-import java.util.UUID
 
 @Singleton
-@io.micronaut.configuration.metrics.annotation.RequiresMetrics
-class DataplaneMeterTagsUpdater(
-  private val registry: MeterRegistry,
-) : ApplicationEventListener<DataplaneConfig> {
+class DataplaneMeterTagsUpdater : ApplicationEventListener<DataplaneConfig> {
   override fun onApplicationEvent(event: DataplaneConfig) {
-    registry
-      .config()
-      .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_ID_TAG, { event.dataplaneId.toString() }))
-      .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_NAME_TAG, { event.dataplaneName }))
-      .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_GROUP_TAG, { event.dataplaneGroupId.toString() }))
-      .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_GROUP_NAME_TAG, { event.dataplaneGroupName }))
-      .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_VISIBILITY, { getDataplaneVisibility(event.organizationId) }))
-      .meterFilter(MeterFilter.replaceTagValues(MetricTags.DATA_PLANE_ORG_ID, { event.organizationId?.toString() ?: MetricTags.UNKNOWN }))
+    // Micrometer-based meter tag replacement has been removed. This listener is preserved
+    // so that other producers of DataplaneConfig events continue to have a registered listener.
   }
-
-  private fun getDataplaneVisibility(dataplaneGroupId: UUID?): String =
-    when (dataplaneGroupId) {
-      null -> MetricTags.UNKNOWN
-      PUBLIC_ORG_ID -> MetricTags.PUBLIC
-      else -> MetricTags.PRIVATE
-    }
 }

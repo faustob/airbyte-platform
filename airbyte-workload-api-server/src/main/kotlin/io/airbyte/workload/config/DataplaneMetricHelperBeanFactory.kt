@@ -5,14 +5,9 @@
 package io.airbyte.workload.config
 
 import io.airbyte.commons.server.metrics.MetricTagsPrettifierCache
-import io.airbyte.commons.server.metrics.PrettifyDataplaneMetricTagsMeterFilterBuilder
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
-import io.micrometer.core.instrument.MeterRegistry
-import io.micronaut.configuration.metrics.annotation.RequiresMetrics
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.event.ApplicationEventListener
-import io.micronaut.runtime.event.ApplicationStartupEvent
 import jakarta.inject.Singleton
 
 @Factory
@@ -22,11 +17,4 @@ class DataplaneMetricHelperBeanFactory {
     dataplaneService: DataplaneService,
     dataplaneGroupService: DataplaneGroupService,
   ): MetricTagsPrettifierCache = MetricTagsPrettifierCache(dataplaneService, dataplaneGroupService)
-
-  @Singleton
-  @RequiresMetrics
-  fun prettifyDataplaneMetricTagsMeterFilterBuilder(
-    cache: MetricTagsPrettifierCache,
-    meterRegistry: MeterRegistry?,
-  ): ApplicationEventListener<ApplicationStartupEvent> = PrettifyDataplaneMetricTagsMeterFilterBuilder(cache, meterRegistry)
 }
