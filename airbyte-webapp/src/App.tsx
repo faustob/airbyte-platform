@@ -22,6 +22,7 @@ import { BlockerService } from "core/services/navigation";
 import { NotificationService } from "core/services/Notification";
 import { DrawerContextProvider } from "core/services/ui/DrawerService";
 import { isDevelopment } from "core/utils/isDevelopment";
+import { RouteChangeTelemetry } from "core/utils/telemetry/RouteChangeTelemetry";
 import { AirbyteThemeProvider } from "core/utils/useAirbyteTheme";
 
 import { Routing } from "./pages/routes";
@@ -74,6 +75,7 @@ const App: React.FC = () => {
           </QueryProvider>
         </I18nProvider>
       </AirbyteThemeProvider>
+      <RouteChangeTelemetry />
       {isDevelopment() && <DevToolsToggle />}
     </>
   );
