@@ -61,7 +61,11 @@ dependencies {
   implementation(libs.micrometer.statsd)
   implementation(libs.sentry.java)
   implementation(libs.failsafe)
-  implementation("com.datadoghq:dd-trace-api:1.55.0")
+  implementation(platform("io.opentelemetry:opentelemetry-bom:1.51.0"))
+  implementation("io.opentelemetry:opentelemetry-api")
+  implementation("io.opentelemetry:opentelemetry-sdk")
+  implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+  implementation("io.opentelemetry:opentelemetry-sdk-extension-autoconfigure")
 
   implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:server-api"))
