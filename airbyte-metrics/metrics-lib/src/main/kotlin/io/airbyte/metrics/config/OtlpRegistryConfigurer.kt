@@ -14,6 +14,9 @@ import io.opentelemetry.semconv.ServiceAttributes
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
+// NOTE: this configurer targets Micrometer's OTLP registry adapter; it is retained because the
+// underlying metrics export mechanism is OpenTelemetry-based, not Micrometer/StatsD instrumentation.
+
 const val OTEL_SERVICE_NAME_ENV_VAR = "OTEL_SERVICE_NAME"
 
 @Order(Int.MAX_VALUE)

@@ -11,7 +11,6 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micrometer.core.instrument.Timer
 import io.micronaut.core.async.publisher.Publishers
 import io.micronaut.http.BasicHttpAttributes
 import io.micronaut.http.HttpRequest
@@ -121,9 +120,7 @@ class TracingServerFilter(
         ApmTraceUtils.recordErrorOnRootSpan(throwable)
       }
 
-      metricClient
-        .timer(OssMetricsRegistry.API_TRACE, *metricAttrs.toTypedArray())
-        ?.also { trace.start.stop(it) }
+      metricClient.timer(OssMetricsRegistry.API_TRACE, *metricAttrs.toTypedArray())
     } catch (e: Exception) {
       logger.error(e) { "failed to trace response" }
     }
@@ -142,7 +139,6 @@ class TracingServerFilter(
 }
 
 private data class Trace(
-  val start: Timer.Sample = Timer.start(),
   // The code here makes it seems like these values can be non-null Stings,
   // but the nullability integration between java/kotlin isn't perfect,
   // and it's possible to pass a null String values to a non-nullable String in Kotlin.
