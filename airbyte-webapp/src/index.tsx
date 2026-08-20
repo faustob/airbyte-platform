@@ -7,6 +7,9 @@ import { I18nProvider } from "core/services/i18n";
 import { CLOUD_EDITION } from "core/utils/app";
 import { loadDatadog } from "core/utils/datadog";
 import { loadConsentManager } from "core/utils/dataPrivacy";
+import { initJsErrorTracking } from "core/utils/telemetry/jsErrors";
+import { initializeOtel } from "core/utils/telemetry/otel";
+import { initWebVitalsReporting } from "core/utils/telemetry/webVitals";
 import { AirbyteThemeProvider } from "core/utils/useAirbyteTheme";
 
 import "react-reflex/styles.css";
@@ -15,6 +18,12 @@ import "./scss/global.scss";
 
 const CloudApp = lazy(() => import(`cloud/App`));
 const App = lazy(() => import(`./App`));
+
+// Register the browser-side OTel MeterProvider and start RUM collection (Core Web Vitals + JS
+// error tracking) as early as possible so nothing during config load is missed.
+initializeOtel();
+initWebVitalsReporting();
+initJsErrorTracking();
 
 loadConfig()
   .then((config) => {
