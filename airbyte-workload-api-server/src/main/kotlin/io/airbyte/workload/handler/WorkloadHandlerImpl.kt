@@ -20,6 +20,10 @@ import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.services.WorkloadService
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.api.trace.Span
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -40,7 +44,7 @@ class WorkloadHandlerImpl(
 
   private fun getDomainWorkload(workloadId: String): DomainWorkload =
     withWorkloadServiceExceptionConverter {
-      workloadService.getWorkload(workloadId)
+      withDbTelemetry("SELECT", "workload") { workloadService.getWorkload(workloadId) }
     }
 
   override fun getWorkloads(
@@ -49,16 +53,19 @@ class WorkloadHandlerImpl(
     updatedBefore: OffsetDateTime?,
   ): List<Workload> {
     val domainWorkloads =
-      workloadRepository.search(
-        dataplaneId,
-        workloadStatus?.map { it.toDomain() },
-        updatedBefore,
-      )
+      withDbTelemetry("SELECT", "workload") {
+        workloadRepository.search(
+          dataplaneId,
+          workloadStatus?.map { it.toDomain() },
+          updatedBefore,
+        )
+      }
 
     return domainWorkloads.map { it.toApi() }
   }
 
-  override fun workloadAlreadyExists(workloadId: String): Boolean = workloadRepository.existsById(workloadId)
+  override fun workloadAlreadyExists(workloadId: String): Boolean =
+    withDbTelemetry("SELECT", "workload") { workloadRepository.existsById(workloadId) }
 
   override fun createWorkload(
     workloadId: String,
@@ -76,25 +83,27 @@ class WorkloadHandlerImpl(
     priority: WorkloadPriority?,
   ) {
     withWorkloadServiceExceptionConverter {
-      workloadService.createWorkload(
-        workloadId = workloadId,
-        labels =
-          labels?.map {
-            io.airbyte.workload.repository.domain
-              .WorkloadLabel(key = it.key, value = it.value)
-          },
-        logPath = logPath,
-        input = input,
-        workspaceId = workspaceId,
-        organizationId = organizationId,
-        mutexKey = mutexKey,
-        type = type,
-        autoId = autoId,
-        deadline = deadline,
-        signalInput = signalInput,
-        dataplaneGroup = dataplaneGroup,
-        priority = priority,
-      )
+      withDbTelemetry("INSERT", "workload") {
+        workloadService.createWorkload(
+          workloadId = workloadId,
+          labels =
+            labels?.map {
+              io.airbyte.workload.repository.domain
+                .WorkloadLabel(key = it.key, value = it.value)
+            },
+          logPath = logPath,
+          input = input,
+          workspaceId = workspaceId,
+          organizationId = organizationId,
+          mutexKey = mutexKey,
+          type = type,
+          autoId = autoId,
+          deadline = deadline,
+          signalInput = signalInput,
+          dataplaneGroup = dataplaneGroup,
+          priority = priority,
+        )
+      }
     }
   }
 
@@ -199,12 +208,14 @@ class WorkloadHandlerImpl(
     quantity: Int,
   ): List<Workload> {
     val domainWorkloads =
-      workloadQueueRepository.pollWorkloadQueue(
-        dataplaneGroup,
-        priority?.toInt(),
-        quantity,
-        redeliveryWindowSecs = airbyteWorkloadApiClientConfig.workloadRedeliveryWindowSeconds,
-      )
+      withDbTelemetry("SELECT", "workload_queue") {
+        workloadQueueRepository.pollWorkloadQueue(
+          dataplaneGroup,
+          priority?.toInt(),
+          quantity,
+          redeliveryWindowSecs = airbyteWorkloadApiClientConfig.workloadRedeliveryWindowSeconds,
+        )
+      }
 
     return domainWorkloads.map { it.toApi() }
   }
@@ -212,17 +223,17 @@ class WorkloadHandlerImpl(
   override fun countWorkloadQueueDepth(
     dataplaneGroup: String?,
     priority: WorkloadPriority?,
-  ): Long = workloadQueueRepository.countEnqueuedWorkloads(dataplaneGroup, priority?.toInt())
+  ): Long = withDbTelemetry("SELECT", "workload_queue") { workloadQueueRepository.countEnqueuedWorkloads(dataplaneGroup, priority?.toInt()) }
 
   override fun getWorkloadQueueStats(): List<WorkloadQueueStats> {
     val domainStats =
-      workloadQueueRepository.getEnqueuedWorkloadStats()
+      withDbTelemetry("SELECT", "workload_queue") { workloadQueueRepository.getEnqueuedWorkloadStats() }
 
     return domainStats.map { it.toApi() }
   }
 
   override fun cleanWorkloadQueue(limit: Int) {
-    workloadQueueRepository.cleanUpAckedEntries(limit)
+    withDbTelemetry("DELETE", "workload_queue") { workloadQueueRepository.cleanUpAckedEntries(limit) }
   }
 
   override fun getActiveWorkloads(
@@ -230,10 +241,12 @@ class WorkloadHandlerImpl(
     statuses: List<ApiWorkloadStatus>?,
   ): List<ApiWorkloadSummary> {
     val domainWorkloadsDTO =
-      workloadRepository.searchActive(
-        dataplaneIds = dataplaneIds,
-        statuses = statuses?.map { it.toDomain() },
-      )
+      withDbTelemetry("SELECT", "workload") {
+        workloadRepository.searchActive(
+          dataplaneIds = dataplaneIds,
+          statuses = statuses?.map { it.toDomain() },
+        )
+      }
     return domainWorkloadsDTO.map { it.toApi() }
   }
 
@@ -243,11 +256,13 @@ class WorkloadHandlerImpl(
     deadline: OffsetDateTime,
   ): List<Workload> {
     val domainWorkloads =
-      workloadRepository.searchForExpiredWorkloads(
-        dataplaneId,
-        workloadStatus?.map { it.toDomain() },
-        deadline,
-      )
+      withDbTelemetry("SELECT", "workload") {
+        workloadRepository.searchForExpiredWorkloads(
+          dataplaneId,
+          workloadStatus?.map { it.toDomain() },
+          deadline,
+        )
+      }
 
     return domainWorkloads.map { it.toApi() }
   }
@@ -261,6 +276,87 @@ class WorkloadHandlerImpl(
       throw InvalidStatusTransitionException(e.message)
     } catch (e: io.airbyte.workload.services.NotFoundException) {
       throw NotFoundException(e.message)
+    }
+  }
+
+  /**
+   * Wraps a database operation with OpenTelemetry db.client.operation.duration telemetry,
+   * classifying the outcome (success/failure) and flagging slow queries with a span event, without
+   * altering control flow. The success outcome is recorded ONLY after the operation returns; on
+   * failure the SAME exception is always rethrown after recording (never swallowed).
+   */
+  private fun <T> withDbTelemetry(
+    operationName: String,
+    collectionName: String,
+    block: () -> T,
+  ): T {
+    val start = System.nanoTime()
+    try {
+      val result = block()
+      recordDbOperation(operationName, collectionName, start, null)
+      return result
+    } catch (t: Throwable) {
+      recordDbOperation(operationName, collectionName, start, t)
+      throw t
+    }
+  }
+
+  private fun recordDbOperation(
+    operationName: String,
+    collectionName: String,
+    start: Long,
+    error: Throwable?,
+  ) {
+    val elapsedSeconds = (System.nanoTime() - start) / 1_000_000_000.0
+    val errorType = error?.javaClass?.simpleName
+    val attributesBuilder =
+      Attributes
+        .builder()
+        .put(AttributeKey.stringKey("db.system.name"), "postgresql")
+        .put(AttributeKey.stringKey("db.operation.name"), operationName)
+        .put(AttributeKey.stringKey("db.collection.name"), collectionName)
+    if (errorType != null) {
+      attributesBuilder.put(AttributeKey.stringKey("error.type"), errorType)
+    }
+    dbOperationDuration.record(elapsedSeconds, attributesBuilder.build())
+    // Plain, unsuffixed count -- outcome is carried purely as an attribute dimension, never baked
+    // into the metric name.
+    dbOperationCounter.add(
+      1,
+      Attributes.of(
+        AttributeKey.stringKey("db.operation.name"), operationName,
+        AttributeKey.stringKey("outcome"), if (errorType == null) "success" else "failure",
+      ),
+    )
+    if (elapsedSeconds * 1000 > SLOW_QUERY_THRESHOLD_MS) {
+      Span.current().addEvent(
+        "slow_query",
+        Attributes.of(
+          AttributeKey.stringKey("db.operation.name"), operationName,
+          AttributeKey.stringKey("db.collection.name"), collectionName,
+        ),
+      )
+    }
+  }
+
+  companion object {
+    private const val SLOW_QUERY_THRESHOLD_MS = 200L
+
+    // Resolved lazily (not at class-load time) so these bind to the GLOBAL OpenTelemetry SDK that
+    // Application.main() registers, rather than to a pre-registration no-op snapshot.
+    private val meter by lazy { GlobalOpenTelemetry.getMeter("io.airbyte.workload.api.server") }
+    private val dbOperationDuration by lazy {
+      meter
+        .histogramBuilder("db.client.operation.duration")
+        .setUnit("s")
+        .setDescription("Duration of database operations issued by the workload API server")
+        .build()
+    }
+    private val dbOperationCounter by lazy {
+      meter
+        .counterBuilder("db.client.operation.count")
+        .setDescription("Count of database operations by operation name and outcome")
+        .build()
     }
   }
 }

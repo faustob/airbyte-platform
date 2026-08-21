@@ -23,6 +23,10 @@ dependencies {
   implementation(libs.okhttp)
   implementation(libs.reactor.core)
   implementation(libs.kotlin.logging)
+  implementation(libs.otel.api)
+  implementation("io.opentelemetry:opentelemetry-sdk:1.56.0")
+  implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.56.0")
+  implementation("io.opentelemetry:opentelemetry-sdk-extension-autoconfigure:1.56.0")
   implementation(libs.bundles.micronaut.metrics)
 
   implementation(project(":oss:airbyte-api:server-api"))
@@ -73,6 +77,9 @@ airbyte {
         "MICRONAUT_ENVIRONMENTS" to "control-plane",
         "SERVICE_NAME" to project.name,
         "TRACKING_STRATEGY" to "logging",
+        // OTel SDK resource attribute for local dev; production deploys must also set
+        // OTEL_TRACES_EXPORTER / OTEL_METRICS_EXPORTER / OTEL_EXPORTER_OTLP_ENDPOINT.
+        "OTEL_SERVICE_NAME" to project.name,
       ),
     )
   }
