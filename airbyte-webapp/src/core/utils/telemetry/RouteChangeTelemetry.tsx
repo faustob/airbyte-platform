@@ -24,7 +24,7 @@ export const RouteChangeTelemetry: React.FC = () => {
   const previousPathRef = useRef<string | null>(null);
   const navHistogram = useMemo(
     () =>
-      getWebappMeter().createHistogram("browser.route_change.duration", {
+      getWebappMeter().createHistogram("web.route_change.duration", {
         description: "Duration of SPA route transitions from navigation start to the next painted frame",
         unit: "ms",
       }),

@@ -35,12 +35,12 @@ export function initWebVitalsReporting(): void {
   });
 
   onLCP((metric) => {
-    lcpHistogram.record(metric.value, { "web.vital.rating": metric.rating });
+    lcpHistogram.record(metric.value, { "web.vital.rating": metric.rating, "navigation.type": metric.navigationType });
   });
   onINP((metric) => {
-    inpHistogram.record(metric.value, { "web.vital.rating": metric.rating });
+    inpHistogram.record(metric.value, { "web.vital.rating": metric.rating, "navigation.type": metric.navigationType });
   });
   onCLS((metric) => {
-    clsHistogram.record(metric.value, { "web.vital.rating": metric.rating });
+    clsHistogram.record(metric.value, { "web.vital.rating": metric.rating, "navigation.type": metric.navigationType });
   });
 }
